@@ -66,7 +66,9 @@ final class XmlDeserializer {
 
     private static Element _deserializeElement(XMLStreamReader2 reader) throws XMLStreamException {
         var stack = new TagElementStack();
-        return _deserializeElementNoRecursion(reader, stack, new TagElement(reader.getLocalName()));
+        var root = new TagElement(reader.getLocalName());
+        _deserializeAttribute(reader, root);
+        return _deserializeElementNoRecursion(reader, stack, root);
     }
 
     private static Element _deserializeElementNoRecursion(XMLStreamReader2 p, TagElementStack stack, final TagElement root) throws XMLStreamException {
@@ -99,9 +101,7 @@ final class XmlDeserializer {
                     currElement.add(value);
                 }
             }
-            // Reached end of array (or input), so...
 
-            // Either way, Object or Array ended, return up nesting level:
             curr = stack.popOrNull();
         } while (curr != null);
 
