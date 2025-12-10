@@ -41,7 +41,7 @@ public class XmlFormatTest {
             <posts>
                 <id>post-001</id>
                 <title>第一篇文章</title>
-                <content>这是第一篇文章的内容, 包含一些 &lt;b&gt;HTML&lt;/b&gt; 标签。</content>
+                <content>这是第一篇文章的内容，包含一些 &lt;b&gt;HTML&lt;/b&gt; 标签。</content>
                 <comments>
                     <user>小红</user>
                     <message>写得很好！</message>
