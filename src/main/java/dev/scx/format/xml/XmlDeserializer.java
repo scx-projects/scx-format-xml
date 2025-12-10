@@ -1,11 +1,11 @@
 package dev.scx.format.xml;
 
-import dev.scx.node.DoubleNode;
 import dev.scx.node.Node;
 import dev.scx.node.NullNode;
 import org.codehaus.stax2.XMLStreamReader2;
 
 import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,17 +61,33 @@ final class XmlDeserializer {
             reader.next();
         }
         // 2, 解析
-        var node = _deserializeElement(reader);
-//        Object o = _deserializeElement(reader);
-        System.out.println(node);
+        var object = _deserializeElement(reader);
         // 3, 验证是否存在后续多余内容
         while (reader.hasNext()) {
             // 非法内容 Woodstox 会为直接抛异常 无需我们处理
             reader.next();
         }
 
-        // todo 这里需要转换
-        return new DoubleNode(1);
+        return _convertToNode(object);
+    }
+
+    private static Node _convertToNode(Object object) {
+        // 只可能存在这四种类型
+        switch (object) {
+            case List<?> list -> {
+
+            }
+            case String str -> {
+
+            }
+            case SimpleEntry<?, ?> entry -> {
+
+            }
+            case NullNode nullNode -> {
+
+            }
+            default -> throw new IllegalStateException();
+        }
     }
 
     private static Object _deserializeElement(XMLStreamReader2 reader) throws XMLStreamException {
@@ -79,26 +95,17 @@ final class XmlDeserializer {
         var currentType = reader.getEventType();
         return switch (currentType) {
             case START_ELEMENT -> {
-                var elements = new ArrayList<>();
-                // 处理属性
-                for (int i = 0; i < reader.getAttributeCount(); i++) {
-                    var n = reader.getAttributeLocalName(i);
-                    var v = reader.getAttributeValue(i);
-                    elements.add(new SimpleEntry<>(n, v));
-                }
-                var isEmptyElement = reader.isEmptyElement();
-                if (isEmptyElement) {
+                var elements = _deserializeAttribute(reader);
+                if (reader.isEmptyElement()) {
                     yield elements.isEmpty() ? NullNode.NULL : elements;
                 }
                 yield _deserializeElementNoRecursion(reader, stack, new ArrayList<>());
-
             }
             default -> throw new XMLStreamException("Unknown element type: " + currentType);
         };
     }
 
-
-    public static Object _deserializeElementNoRecursion(XMLStreamReader2 p, ContainerStack stack, final List<Object> root) throws XMLStreamException {
+    private static Object _deserializeElementNoRecursion(XMLStreamReader2 p, ContainerStack stack, final List<Object> root) throws XMLStreamException {
         List<Object> curr = root;
         outer_loop:
         do {
@@ -112,13 +119,7 @@ final class XmlDeserializer {
                 switch (t) {
                     case START_ELEMENT -> {
                         stack.push(curr);
-                        curr = new ArrayList<>();
-                        // 处理属性
-                        for (int i = 0; i < p.getAttributeCount(); i++) {
-                            var n = p.getAttributeLocalName(i);
-                            var v = p.getAttributeValue(i);
-                            curr.add(new SimpleEntry<>(n, v));
-                        }
+                        curr = _deserializeAttribute(p);
                         var name = p.getLocalName();
                         // 自闭合且无属性, 加入 NULL, 否则加入 curr
                         if (p.isEmptyElement() && curr.isEmpty()) {
@@ -132,15 +133,7 @@ final class XmlDeserializer {
                     case END_ELEMENT -> {
                         break arrayLoop;
                     }
-                    case CHARACTERS -> {
-                        var text = p.getText();
-                        if (text.isBlank()) {
-                            value = null;
-                        } else {
-                            value = text;
-                        }
-                    }
-
+                    case CHARACTERS -> value = _fromText(p);
                     default -> value = null;// 忽略其他所有情况
                 }
                 if (value != null) {
@@ -154,6 +147,22 @@ final class XmlDeserializer {
         } while (curr != null);
 
         return root;
+    }
+
+    private static ArrayList<Object> _deserializeAttribute(XMLStreamReader2 p) {
+        var attributes = new ArrayList<>();
+        // 处理属性
+        for (int i = 0; i < p.getAttributeCount(); i++) {
+            var n = p.getAttributeLocalName(i);
+            var v = p.getAttributeValue(i);
+            attributes.add(new SimpleEntry<>(n, v));
+        }
+        return attributes;
+    }
+
+    private static String _fromText(XMLStreamReader p) {
+        var text = p.getText();
+        return text.isBlank() ? null : text;
     }
 
 }
