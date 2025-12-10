@@ -7,6 +7,7 @@ import org.codehaus.stax2.XMLStreamReader2;
 
 import javax.xml.stream.XMLStreamException;
 import java.util.AbstractMap;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,7 +65,7 @@ final class XmlDeserializer {
         var stack = new ContainerStack();
         var node = cccc(reader, stack, new ArrayList<>());
 //        Object o = _deserializeElement(reader);
-        System.out.println();
+        System.out.println(node);
         // 3, 验证是否存在后续多余内容
         while (reader.hasNext()) {
             // 非法内容 Woodstox 会为直接抛异常 无需我们处理
@@ -84,7 +85,7 @@ final class XmlDeserializer {
         for (int i = 0; i < attributeCount; i = i + 1) {
             var name = reader.getAttributeLocalName(i);
             var value = reader.getAttributeValue(i);
-            elements.add(new AbstractMap.SimpleEntry<>(name, value));
+            elements.add(new SimpleEntry<>(name, value));
         }
 
         // 2, 判断是否是自闭合标签
@@ -106,7 +107,7 @@ final class XmlDeserializer {
             if (eventType == START_ELEMENT) {
                 var name = reader.getLocalName();
                 var element = _deserializeElement(reader);
-                elements.add(new AbstractMap.SimpleEntry<>(name, element));
+                elements.add(new SimpleEntry<>(name, element));
             } else if (eventType == CHARACTERS) {
                 // 遇到了文本 进行存储
                 var text = reader.getText();
@@ -138,28 +139,21 @@ final class XmlDeserializer {
                         var t = p.next();
                         switch (t) {
                             case START_ELEMENT -> {
-                                // 判断是否无属性闭合标签
-                                var attributeCount = p.getAttributeCount();
-                                var isEmptyElement = p.isEmptyElement();
-                                // todo 这里 如果是 无属性闭合标签应该 用 NULL
-                                // 判断是否无属性闭合标签
-                                if (isEmptyElement && attributeCount == 0) {
-                                    value = null;
-                                    currArray.add(new AbstractMap.SimpleEntry<>(p.getLocalName(), NullNode.NULL));
-                                    break arrayLoop;
-                                }
-
                                 stack.push(curr);
                                 curr = new ArrayList<>();
                                 // 处理属性
-                                for (int i = 0; i < attributeCount; i++) {
-                                    curr.add(new AbstractMap.SimpleEntry<>(
-                                        p.getAttributeLocalName(i),
-                                        p.getAttributeValue(i)
-                                    ));
+                                for (int i = 0; i < p.getAttributeCount(); i++) {
+                                    var n = p.getAttributeLocalName(i);
+                                    var v = p.getAttributeValue(i);
+                                    curr.add(new SimpleEntry<>(n, v));
                                 }
                                 var name = p.getLocalName();
-                                currArray.add(new AbstractMap.SimpleEntry<>(name, curr));
+                                // 自闭合且无属性, 加入 NULL, 否则加入 curr
+                                if (p.isEmptyElement() && curr.isEmpty()) {
+                                    currArray.add(new SimpleEntry<>(name, NullNode.NULL));
+                                } else {
+                                    currArray.add(new SimpleEntry<>(name, curr));
+                                }
                                 continue outer_loop;
 
                             }
