@@ -54,6 +54,16 @@ final class XmlSerializer {
         }
         switch (element) {
             case TagElement tagElement -> {
+                // 没有子元素 使用自闭合标签
+                if (tagElement.isEmpty()) {
+                    writer2.writeEmptyElement(tagElement.tagName());
+                    for (var attribute : tagElement.attributes()) {
+                        writer2.writeAttribute(attribute.name(), attribute.value());
+                    }
+                    return;
+                }
+
+                // 标准标签
                 writer2.writeStartElement(tagElement.tagName());
                 for (var attribute : tagElement.attributes()) {
                     writer2.writeAttribute(attribute.name(), attribute.value());
