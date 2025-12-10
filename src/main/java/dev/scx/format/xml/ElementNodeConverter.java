@@ -6,6 +6,9 @@ import dev.scx.node.IntNode;
 import dev.scx.node.Node;
 
 // todo 采取什么规则 ?
+/// 因为 XML <-> 通用对象 并不是完全语义兼容的,
+/// 比如数组, 根节点, 空值等.
+/// 这里 我们规定一些 转换规则.
 public class ElementNodeConverter {
 
     /// ### elementToNode 规则:
