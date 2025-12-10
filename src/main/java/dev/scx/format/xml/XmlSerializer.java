@@ -8,31 +8,7 @@ import org.codehaus.stax2.XMLStreamWriter2;
 
 import javax.xml.stream.XMLStreamException;
 
-/// ### 序列化规则
-///
-/// 0. 跟标签默认 -> root, 没有上下文 key 可用的数组 默认 -> item.
-///    支持外部配置, 防止某些情况下的冲突
-///
-/// 1. `"123"` -> `<root>123</root>`
-///    值类型 -> 标准标签
-///
-/// 2. `NULL` -> `<root/>`
-///    NULL -> 闭合标签
-///
-/// 3. `{"a": 123}` -> `<root><a>123</a></root>`
-///    对象类型 -> 嵌套标签
-///
-/// 4. `{"a": [1, 2]}` -> `<root><a>1</a><a>2</a></root>``
-///    数组 -> 尝试重复
-///
-/// 5. `[1, 2]` -> `<root><item>1</item><item>2</item></root>`
-///    数组没有可用的上文 key -> 使用 item
-///
-/// 6. `[1, [2]]` -> `<root><item>1</item><item><item>2</item></item></root>`
-///    嵌套数组不进行任何扁平化
-///
-/// 7, `{"": 123}` -> `<root>123</root>`
-///    key 为 "", 直接解包
+/// XmlSerializer
 ///
 /// @author scx567888
 /// @version 0.0.1

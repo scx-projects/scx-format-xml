@@ -10,40 +10,7 @@ import javax.xml.stream.XMLStreamReader;
 
 import static javax.xml.stream.XMLStreamConstants.*;
 
-/// ### 解析规则:
-///
-/// 1. `<a></a>` -> `""`
-///     没有文本和子元素 -> StringNode("")
-///
-/// 2. `<a/>` -> `NULL`
-///     没有文本和子元素 (自闭合标签) -> NULL
-///
-/// 3. `<a>123</a>` -> `"123"`
-///     只有文本时 -> StringNode
-///
-/// 4. `<a><b>123</b></a>` -> `{"b": "123"}`
-///     存在子元素 -> ObjectNode
-///
-/// 5. `<a name="jack"></a>` 或 `<a name="jack" />` -> `{"name": "jack"}`
-///     存在属性 (无论是否自闭合) -> ObjectNode
-///
-/// 6. `<a name="jack"><age>18</age></a>` -> `{"name": "jack", "age": "18"}`
-///     属性和子元素相同方式看待 -> ObjectNode
-///
-/// 7. `<a>000<b>123</b></a>` -> `{"b": "123", "": "000"}`
-///     同时存在子元素和单个文本 -> 将文本视为单个 StringNode, 并以 "" 为 key 合并到 ObjectNode 中
-///
-/// 8. `<a>000<b>123</b>6666</a>` -> `{"b": "123", "": ["000", "6666"]}`
-///     同时存在子元素和多个文本 -> 将多个文本视为 ArrayNode(StringNode[]) , 并以 "" 为 key 合并到 Object 中
-///
-/// 9. `<a><b>123</b><b>456</b></a>` -> `{"b": ["123", "456"]}`
-///     存在多个同名子元素 -> 合并子元素为 ArrayNode
-///
-/// 10, `<a name="jack" name="rose"></a>` -> `{"name": ["jack", "rose"]}`
-///     存在多个同名属性 -> 合并属性为 ArrayNode
-///
-/// 11, `<a name="">  <b> 1 2 3 </b>   </a>` -> `{"b": " 1 2 3 ", "name": "" }`
-///     所有的纯空白文本节点视为不存在, 但有内容则保留原始文本, 属性永远保留原始文本
+/// XmlDeserializer
 ///
 /// @author scx567888
 /// @version 0.0.1
