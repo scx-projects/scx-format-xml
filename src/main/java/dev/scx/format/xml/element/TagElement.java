@@ -55,7 +55,7 @@ public final class TagElement implements Element, Iterable<Element> {
         this.attributes.add(attribute);
     }
 
-    public void addAttribute(String name,String value) {
+    public void addAttribute(String name, String value) {
         attributes.add(new Attribute(name, value));
     }
 
@@ -74,6 +74,5 @@ public final class TagElement implements Element, Iterable<Element> {
     public List<Attribute> attributes() {
         return attributes;
     }
-
 
 }

@@ -1,20 +1,20 @@
 package dev.scx.format.xml;
 
-import java.util.Arrays;
-import java.util.List;
+import dev.scx.format.xml.element.TagElement;
 
-/// ContainerStack
+import java.util.Arrays;
+
+/// TagElementStack
 ///
 /// @author scx567888
 /// @version 0.0.1
-@SuppressWarnings("unchecked")
-final class ContainerStack {
+final class TagElementStack {
 
-    private List<Object>[] _stack;
+    private TagElement[] _stack;
     private int _top;
     private int _end;
 
-    public ContainerStack() {
+    public TagElementStack() {
 
     }
 
@@ -23,14 +23,14 @@ final class ContainerStack {
         return _top;
     }
 
-    public void push(List<Object> node) {
+    public void push(TagElement node) {
         if (_top < _end) {
             _stack[_top++] = node; // lgtm [java/dereferenced-value-may-be-null]
             return;
         }
         if (_stack == null) {
             _end = 10;
-            _stack = new List[_end];
+            _stack = new TagElement[_end];
         } else {
             // grow by 50%, for most part
             _end += Math.min(4000, Math.max(20, _end >> 1));
@@ -39,7 +39,7 @@ final class ContainerStack {
         _stack[_top++] = node;
     }
 
-    public List<Object> popOrNull() {
+    public TagElement popOrNull() {
         if (_top == 0) {
             return null;
         }
