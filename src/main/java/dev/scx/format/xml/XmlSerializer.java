@@ -44,7 +44,7 @@ final class XmlSerializer {
         this.maxNestingDepth = options.maxNestingDepth();
     }
 
-    public void serialize(XMLStreamWriter2 writer2, Element element) throws XMLStreamException, NodeToFormatException {
+    public void serialize(XMLStreamWriter2 writer2, TagElement element) throws XMLStreamException, NodeToFormatException {
         _serialize(writer2, element, 1);
     }
 
