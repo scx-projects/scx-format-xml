@@ -2,7 +2,6 @@ package dev.scx.format.xml;
 
 import dev.scx.format.xml.element.Element;
 import dev.scx.format.xml.element.TagElement;
-import dev.scx.format.xml.element.TextElement;
 import dev.scx.node.IntNode;
 import dev.scx.node.Node;
 
