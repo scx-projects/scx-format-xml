@@ -1,16 +1,12 @@
 package dev.scx.format.xml;
 
-import dev.scx.node.Node;
-import dev.scx.node.NullNode;
-import dev.scx.node.ObjectNode;
-import dev.scx.node.StringNode;
+import dev.scx.format.xml.element.Element;
+import dev.scx.format.xml.element.TagElement;
+import dev.scx.format.xml.element.TextElement;
 import org.codehaus.stax2.XMLStreamReader2;
 
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.ArrayList;
-import java.util.List;
 
 import static javax.xml.stream.XMLStreamConstants.*;
 
@@ -53,13 +49,9 @@ import static javax.xml.stream.XMLStreamConstants.*;
 /// @version 0.0.1
 final class XmlDeserializer {
 
-    public static Node deserialize(XMLStreamReader2 reader) throws XMLStreamException {
+    public static Element deserialize(XMLStreamReader2 reader) throws XMLStreamException {
         // 1, 循环直到找到第一个元素起始
-        while (true) {
-            int eventType = reader.getEventType();
-            if (eventType == START_ELEMENT) {
-                break;
-            }
+        while (reader.getEventType() != START_ELEMENT) {
             reader.next();
         }
         // 2, 解析为 element 结构
@@ -69,88 +61,42 @@ final class XmlDeserializer {
             // 非法内容 Woodstox 会为直接抛异常 无需我们处理
             reader.next();
         }
-        // 4, 将 element 按照一定规则转换成 Node
-        return _elementToNode(element);
+        return element;
     }
 
-    private static Node _elementToNode(Object element) {
-        // 只可能存在这四种类型
-        switch (element) {
-            case List<?> list -> {
-                // 我们需要遍历 list
-                // 1, 如果 全部是 SimpleEntry 并且 key 全是一致的, 我们将其看作一个数组.
-                // 2, 如果 全部是 SimpleEntry 但是 key 存在不同, 我们将其看作一个对象.
-                // 3, 如果 满足 2, 我们将其中一些相同的 key 也看作一个数组.
-                for (var o : list) {
-
-                }
-                return new ObjectNode();
-            }
-            // key 永远是 string, value 永远是 NULL/String/List
-            case SimpleEntry<?, ?> entry -> {
-                return new ObjectNode();
-            }
-            // String 转换成 StringNode
-            case String str -> {
-                return new StringNode(str);
-            }
-            // 已经是 NullNode 直接返回
-            case NullNode nullNode -> {
-                return nullNode;
-            }
-            default -> throw new IllegalStateException();
-        }
+    private static Element _deserializeElement(XMLStreamReader2 reader) throws XMLStreamException {
+        var stack = new TagElementStack();
+        return _deserializeElementNoRecursion(reader, stack, new TagElement(reader.getLocalName()));
     }
 
-    private static Object _deserializeElement(XMLStreamReader2 reader) throws XMLStreamException {
-        var stack = new ContainerStack();
-        var currentType = reader.getEventType();
-        return switch (currentType) {
-            case START_ELEMENT -> {
-                var elements = _deserializeAttribute(reader);
-                if (reader.isEmptyElement()) {
-                    yield elements.isEmpty() ? NullNode.NULL : elements;
-                }
-                yield _deserializeElementNoRecursion(reader, stack, new ArrayList<>());
-            }
-            // 理论上永远不会发生
-            default -> throw new XMLStreamException("Unknown element type: " + currentType);
-        };
-    }
+    private static Element _deserializeElementNoRecursion(XMLStreamReader2 p, TagElementStack stack, final TagElement root) throws XMLStreamException {
+        TagElement curr = root;
 
-    private static Object _deserializeElementNoRecursion(XMLStreamReader2 p, ContainerStack stack, final List<Object> root) throws XMLStreamException {
-        List<Object> curr = root;
         outer_loop:
         do {
+            var currElement = curr;
 
-            var currArray = curr;
-
-            arrayLoop:
+            elementLoop:
             while (true) {
-                Object value;
+                Element value;
                 var t = p.next();
                 switch (t) {
                     case START_ELEMENT -> {
+                        var newElement = new TagElement(p.getLocalName());
+                        _deserializeAttribute(p, newElement);
+                        currElement.add(newElement);
                         stack.push(curr);
-                        curr = _deserializeAttribute(p);
-                        var name = p.getLocalName();
-                        // 自闭合且无属性, 加入 NULL, 否则加入 curr
-                        if (p.isEmptyElement() && curr.isEmpty()) {
-                            currArray.add(new SimpleEntry<>(name, NullNode.NULL));
-                        } else {
-                            currArray.add(new SimpleEntry<>(name, curr));
-                        }
+                        curr = newElement;
                         continue outer_loop;
-
                     }
                     case END_ELEMENT -> {
-                        break arrayLoop;
+                        break elementLoop;
                     }
                     case CHARACTERS -> value = _fromText(p);
                     default -> value = null;// 忽略其他所有情况
                 }
                 if (value != null) {
-                    currArray.add(value);
+                    currElement.add(value);
                 }
             }
             // Reached end of array (or input), so...
@@ -162,20 +108,18 @@ final class XmlDeserializer {
         return root;
     }
 
-    private static ArrayList<Object> _deserializeAttribute(XMLStreamReader2 p) {
-        var attributes = new ArrayList<>();
+    private static void _deserializeAttribute(XMLStreamReader2 p, TagElement tagElement) {
         // 处理属性
         for (int i = 0; i < p.getAttributeCount(); i++) {
             var n = p.getAttributeLocalName(i);
             var v = p.getAttributeValue(i);
-            attributes.add(new SimpleEntry<>(n, v));
+            tagElement.addAttribute(n, v);
         }
-        return attributes;
     }
 
-    private static String _fromText(XMLStreamReader p) {
+    private static TextElement _fromText(XMLStreamReader p) {
         var text = p.getText();
-        return text.isBlank() ? null : text;
+        return text.isBlank() ? null : new TextElement(text);
     }
 
 }
