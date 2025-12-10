@@ -1,7 +1,9 @@
 package dev.scx.format.xml;
 
 import dev.scx.format.NodeToFormatException;
-import dev.scx.node.*;
+import dev.scx.format.xml.element.Element;
+import dev.scx.format.xml.element.TagElement;
+import dev.scx.format.xml.element.TextElement;
 import org.codehaus.stax2.XMLStreamWriter2;
 
 import javax.xml.stream.XMLStreamException;
@@ -36,60 +38,33 @@ import javax.xml.stream.XMLStreamException;
 /// @version 0.0.1
 final class XmlSerializer {
 
-    private final String rootName;
     private final int maxNestingDepth;
-    private final String itemName;
 
     public XmlSerializer(XmlNodeConverterOptions options) {
-        this.rootName = options.rootName();
         this.maxNestingDepth = options.maxNestingDepth();
-        this.itemName = options.itemName();
     }
 
-    public void serialize(XMLStreamWriter2 writer2, Node node) throws XMLStreamException, NodeToFormatException {
-        // 顶级数组需要特殊处理
-        var isRootArray = node instanceof ArrayNode;
-        _serialize(writer2, node, rootName, isRootArray, 1);
+    public void serialize(XMLStreamWriter2 writer2, Element element) throws XMLStreamException, NodeToFormatException {
+        _serialize(writer2, element, 1);
     }
 
-    private void _serialize(XMLStreamWriter2 writer2, Node node, String key, boolean inArray, int currentDepth) throws XMLStreamException, NodeToFormatException {
+    private void _serialize(XMLStreamWriter2 writer2, Element element, int currentDepth) throws XMLStreamException, NodeToFormatException {
         if (currentDepth > maxNestingDepth) {
             throw new NodeToFormatException("Nesting depth exceeds limit: " + maxNestingDepth);
         }
-        switch (node) {
-            case NullNode _ -> {
-                // 如果根节点本身就是 null, 直接返回自闭合标签
-                writer2.writeEmptyElement(key);
-            }
-            case ValueNode valueNode -> {
-                // "", 直接解包
-                if (key.isEmpty()) {
-                    writer2.writeCharacters(valueNode.asString());
-                } else {
-                    writer2.writeStartElement(key);
-                    writer2.writeCharacters(valueNode.asString());
-                    writer2.writeEndElement();
+        switch (element) {
+            case TagElement tagElement -> {
+                writer2.writeStartElement(tagElement.tagName());
+                for (var attribute : tagElement.attributes()) {
+                    writer2.writeAttribute(attribute.name(), attribute.value());
                 }
-            }
-            case ObjectNode objectNode -> {
-                writer2.writeStartElement(key);
-                for (var e : objectNode) {
-                    _serialize(writer2, e.getValue(), e.getKey(), false, currentDepth + 1);
+                for (var e : tagElement) {
+                    _serialize(writer2, e, currentDepth + 1);
                 }
                 writer2.writeEndElement();
             }
-            case ArrayNode arrayNode -> {
-                if (inArray) {
-                    writer2.writeStartElement(key);
-                    for (var e : arrayNode) {
-                        _serialize(writer2, e, itemName, true, currentDepth + 1);
-                    }
-                    writer2.writeEndElement();
-                } else {
-                    for (var e : arrayNode) {
-                        _serialize(writer2, e, key, true, currentDepth + 1);
-                    }
-                }
+            case TextElement textElement -> {
+                writer2.writeCharacters(textElement.text());
             }
         }
     }
