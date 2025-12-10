@@ -6,7 +6,6 @@ import dev.scx.node.NullNode;
 import org.codehaus.stax2.XMLStreamReader2;
 
 import javax.xml.stream.XMLStreamException;
-import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,8 +61,7 @@ final class XmlDeserializer {
             reader.next();
         }
         // 2, 解析
-        var stack = new ContainerStack();
-        var node = cccc(reader, stack, new ArrayList<>());
+        var node = _deserializeElement(reader);
 //        Object o = _deserializeElement(reader);
         System.out.println(node);
         // 3, 验证是否存在后续多余内容
@@ -77,107 +75,79 @@ final class XmlDeserializer {
     }
 
     private static Object _deserializeElement(XMLStreamReader2 reader) throws XMLStreamException {
-        // 记录出现过的子元素和属性
-        var elements = new ArrayList<Object>();
-
-        // 1, 处理当前元素的属性
-        int attributeCount = reader.getAttributeCount();
-        for (int i = 0; i < attributeCount; i = i + 1) {
-            var name = reader.getAttributeLocalName(i);
-            var value = reader.getAttributeValue(i);
-            elements.add(new SimpleEntry<>(name, value));
-        }
-
-        // 2, 判断是否是自闭合标签
-        var emptyElement = reader.isEmptyElement();
-        // 自闭合标签 无需处理内部元素 直接返回
-        if (emptyElement) {
-            // 这里别忘了移动
-            reader.next();
-            if (elements.isEmpty()) {
-                return NullNode.NULL;
-            } else {
-                return elements;
-            }
-        }
-
-        while (true) {
-            var eventType = reader.next();
-            // 如果又遇到了一个 ELEMENT 进行递归解析
-            if (eventType == START_ELEMENT) {
-                var name = reader.getLocalName();
-                var element = _deserializeElement(reader);
-                elements.add(new SimpleEntry<>(name, element));
-            } else if (eventType == CHARACTERS) {
-                // 遇到了文本 进行存储
-                var text = reader.getText();
-                // 忽略空白字符
-                if (!text.isBlank()) {
-                    elements.add(text);
+        var stack = new ContainerStack();
+        var currentType = reader.getEventType();
+        return switch (currentType) {
+            case START_ELEMENT -> {
+                var elements = new ArrayList<>();
+                // 处理属性
+                for (int i = 0; i < reader.getAttributeCount(); i++) {
+                    var n = reader.getAttributeLocalName(i);
+                    var v = reader.getAttributeValue(i);
+                    elements.add(new SimpleEntry<>(n, v));
                 }
-            } else if (eventType == END_ELEMENT) {
-                // 跳出循环
-                break;
-            }
-            // 其余的 我们全部 当做不存在, 比如注释之类
-        }
+                var isEmptyElement = reader.isEmptyElement();
+                if (isEmptyElement) {
+                    yield elements.isEmpty() ? NullNode.NULL : elements;
+                }
+                yield _deserializeElementNoRecursion(reader, stack, new ArrayList<>());
 
-        return elements;
+            }
+            default -> throw new XMLStreamException("Unknown element type: " + currentType);
+        };
     }
 
 
-    public static Object cccc(XMLStreamReader2 p, ContainerStack stack, final List<Object> root) throws XMLStreamException {
+    public static Object _deserializeElementNoRecursion(XMLStreamReader2 p, ContainerStack stack, final List<Object> root) throws XMLStreamException {
         List<Object> curr = root;
         outer_loop:
         do {
 
-            switch (curr) {
-                case List<Object> currArray -> {
-                    arrayLoop:
-                    while (true) {
-                        Object value;
-                        var t = p.next();
-                        switch (t) {
-                            case START_ELEMENT -> {
-                                stack.push(curr);
-                                curr = new ArrayList<>();
-                                // 处理属性
-                                for (int i = 0; i < p.getAttributeCount(); i++) {
-                                    var n = p.getAttributeLocalName(i);
-                                    var v = p.getAttributeValue(i);
-                                    curr.add(new SimpleEntry<>(n, v));
-                                }
-                                var name = p.getLocalName();
-                                // 自闭合且无属性, 加入 NULL, 否则加入 curr
-                                if (p.isEmptyElement() && curr.isEmpty()) {
-                                    currArray.add(new SimpleEntry<>(name, NullNode.NULL));
-                                } else {
-                                    currArray.add(new SimpleEntry<>(name, curr));
-                                }
-                                continue outer_loop;
+            var currArray = curr;
 
-                            }
-                            case END_ELEMENT -> {
-                                break arrayLoop;
-                            }
-                            case CHARACTERS -> {
-                                var text = p.getText();
-                                if (text.isBlank()) {
-                                    value = null;
-                                } else {
-                                    value = text;
-                                }
-                            }
-
-                            default -> throw new RuntimeException("123");
+            arrayLoop:
+            while (true) {
+                Object value;
+                var t = p.next();
+                switch (t) {
+                    case START_ELEMENT -> {
+                        stack.push(curr);
+                        curr = new ArrayList<>();
+                        // 处理属性
+                        for (int i = 0; i < p.getAttributeCount(); i++) {
+                            var n = p.getAttributeLocalName(i);
+                            var v = p.getAttributeValue(i);
+                            curr.add(new SimpleEntry<>(n, v));
                         }
-                        if (value != null) {
-                            currArray.add(value);
+                        var name = p.getLocalName();
+                        // 自闭合且无属性, 加入 NULL, 否则加入 curr
+                        if (p.isEmptyElement() && curr.isEmpty()) {
+                            currArray.add(new SimpleEntry<>(name, NullNode.NULL));
+                        } else {
+                            currArray.add(new SimpleEntry<>(name, curr));
+                        }
+                        continue outer_loop;
+
+                    }
+                    case END_ELEMENT -> {
+                        break arrayLoop;
+                    }
+                    case CHARACTERS -> {
+                        var text = p.getText();
+                        if (text.isBlank()) {
+                            value = null;
+                        } else {
+                            value = text;
                         }
                     }
-                    // Reached end of array (or input), so...
+
+                    default -> value = null;// 忽略其他所有情况
+                }
+                if (value != null) {
+                    currArray.add(value);
                 }
             }
+            // Reached end of array (or input), so...
 
             // Either way, Object or Array ended, return up nesting level:
             curr = stack.popOrNull();
