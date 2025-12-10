@@ -75,4 +75,56 @@ public final class TagElement implements Element, Iterable<Element> {
         return attributes;
     }
 
+    @Override
+    public String toString() {
+        // 采用 XML 格式
+        // 这里假设 TagElement 不存在自引用
+        return toString0(0);
+    }
+
+    private String toString0(int indent) {
+        // 采用 XML 格式
+        // 这里假设 TagElement 不存在自引用
+        var sb = new StringBuilder();
+
+        // 缩进
+        sb.append("    ".repeat(indent));
+
+        // 开头
+        sb.append("<").append(tagName);
+
+        // 属性
+        for (var attr : attributes) {
+            sb.append(" ").append(attr.toString());
+        }
+
+        // 如果无子元素: 自闭合
+        if (children.isEmpty()) {
+            sb.append("/>");
+            return sb.toString();
+        }
+
+        sb.append(">");
+
+        // 有子元素 → 换行并打印子节点
+        sb.append("\n");
+
+        for (var child : children) {
+            if (child instanceof TagElement tag) {
+                sb.append(tag.toString0(indent + 1));
+                sb.append("\n");
+            } else if (child instanceof TextElement text) {
+                sb.append("    ".repeat(indent + 1))
+                    .append(text.text())
+                    .append("\n");
+            }
+        }
+
+        // 尾部标签
+        sb.append("    ".repeat(indent))
+            .append("</").append(tagName).append(">");
+
+        return sb.toString();
+    }
+
 }
