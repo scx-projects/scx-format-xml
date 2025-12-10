@@ -5,13 +5,12 @@ import dev.scx.node.Node;
 import dev.scx.node.NullNode;
 import org.codehaus.stax2.XMLStreamReader2;
 
-import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 
-import static javax.xml.stream.XMLStreamConstants.END_ELEMENT;
+import static javax.xml.stream.XMLStreamConstants.*;
 
 /// ### 解析规则:
 ///
@@ -56,15 +55,15 @@ final class XmlDeserializer {
         // 1, 循环直到找到第一个元素起始
         while (true) {
             int eventType = reader.getEventType();
-            if (eventType == XMLStreamConstants.START_ELEMENT) {
+            if (eventType == START_ELEMENT) {
                 break;
             }
             reader.next();
         }
         // 2, 解析
         var stack = new ContainerStack();
-//        var node = _deserializeContainerNoRecursion(reader, stack, new ArrayList<>());
-        Object o = _deserializeElement(reader);
+        var node = cccc(reader, stack, new ArrayList<>());
+//        Object o = _deserializeElement(reader);
         System.out.println();
         // 3, 验证是否存在后续多余内容
         while (reader.hasNext()) {
@@ -104,18 +103,18 @@ final class XmlDeserializer {
         while (true) {
             var eventType = reader.next();
             // 如果又遇到了一个 ELEMENT 进行递归解析
-            if (eventType == XMLStreamConstants.START_ELEMENT) {
+            if (eventType == START_ELEMENT) {
                 var name = reader.getLocalName();
                 var element = _deserializeElement(reader);
                 elements.add(new AbstractMap.SimpleEntry<>(name, element));
-            } else if (eventType == XMLStreamConstants.CHARACTERS) {
+            } else if (eventType == CHARACTERS) {
                 // 遇到了文本 进行存储
                 var text = reader.getText();
                 // 忽略空白字符
                 if (!text.isBlank()) {
                     elements.add(text);
                 }
-            } else if (eventType == XMLStreamConstants.END_ELEMENT) {
+            } else if (eventType == END_ELEMENT) {
                 // 跳出循环
                 break;
             }
@@ -125,75 +124,70 @@ final class XmlDeserializer {
         return elements;
     }
 
-    // Non-recursive alternative
-    private static List<Object> _deserializeContainerNoRecursion(XMLStreamReader2 p, ContainerStack stack, final List<Object> root) throws  XMLStreamException {
-        List<Object> curr = root;
 
+    public static Object cccc(XMLStreamReader2 p, ContainerStack stack, final List<Object> root) throws XMLStreamException {
+        List<Object> curr = root;
         outer_loop:
         do {
 
-            // 1, 处理当前元素的属性
-            int attributeCount = p.getAttributeCount();
-            for (int i = 0; i < attributeCount; i = i + 1) {
-                var name = p.getAttributeLocalName(i);
-                var value = p.getAttributeValue(i);
-                curr.add(new AbstractMap.SimpleEntry<>(name, value));
-            }
+            switch (curr) {
+                case List<Object> currArray -> {
+                    arrayLoop:
+                    while (true) {
+                        Object value;
+                        var t = p.next();
+                        switch (t) {
+                            case START_ELEMENT -> {
+                                // 判断是否无属性闭合标签
+                                var attributeCount = p.getAttributeCount();
+                                var isEmptyElement = p.isEmptyElement();
+                                // todo 这里 如果是 无属性闭合标签应该 用 NULL
+                                // 判断是否无属性闭合标签
+                                if (isEmptyElement && attributeCount == 0) {
+                                    value = null;
+                                    currArray.add(new AbstractMap.SimpleEntry<>(p.getLocalName(), NullNode.NULL));
+                                    break arrayLoop;
+                                }
 
-//            // 2, 判断是否是自闭合标签
-            var emptyElement = p.isEmptyElement();
-//            // 自闭合标签 无需处理内部元素 直接返回
-            if (emptyElement) {
-//                // 这里别忘了移动
-                p.next();
-//                if (attributeCount == 0) {
-//                    return NullNode.NULL;
-//                } else {
-//                    return elements;
-//                }
-            }
+                                stack.push(curr);
+                                curr = new ArrayList<>();
+                                // 处理属性
+                                for (int i = 0; i < attributeCount; i++) {
+                                    curr.add(new AbstractMap.SimpleEntry<>(
+                                        p.getAttributeLocalName(i),
+                                        p.getAttributeValue(i)
+                                    ));
+                                }
+                                var name = p.getLocalName();
+                                currArray.add(new AbstractMap.SimpleEntry<>(name, curr));
+                                continue outer_loop;
 
-            arrayLoop:
-            while (true) {
-                String value;
-                var t = p.next();
+                            }
+                            case END_ELEMENT -> {
+                                break arrayLoop;
+                            }
+                            case CHARACTERS -> {
+                                var text = p.getText();
+                                if (text.isBlank()) {
+                                    value = null;
+                                } else {
+                                    value = text;
+                                }
+                            }
 
-                switch (t) {
-                    case XMLStreamConstants.START_ELEMENT -> {
-                        stack.push(curr);
-                        var arr = new ArrayList<>();
-                        var name = p.getLocalName();
-                        curr.add(new AbstractMap.SimpleEntry<>(name, arr));
-                        curr = arr;
-                        continue outer_loop;
-                    }
-                    case END_ELEMENT -> {
-                        break arrayLoop;
-                    }
-                    case XMLStreamConstants.CHARACTERS -> {
-                        // 遇到了文本 进行存储
-                        var text = p.getText();
-                        // 忽略空白字符
-                        if (!text.isBlank()) {
-                            value = text;
-                        } else {
-                            value = null;
+                            default -> throw new RuntimeException("123");
                         }
-
+                        if (value != null) {
+                            currArray.add(value);
+                        }
                     }
-                    default -> throw new RuntimeException("123");
+                    // Reached end of array (or input), so...
                 }
-                if (value != null) {
-                    curr.add(value);
-                }
-                // Reached end of array (or input), so...
-
-
             }
+
             // Either way, Object or Array ended, return up nesting level:
             curr = stack.popOrNull();
-        }
-        while (curr != null);
+        } while (curr != null);
 
         return root;
     }
