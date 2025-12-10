@@ -20,6 +20,11 @@ final class XmlSerializer {
         this.maxNestingDepth = options.maxNestingDepth();
     }
 
+    /// todo 待处理 比如自动包裹
+    public void serialize(XMLStreamWriter2 writer2, Element element) throws XMLStreamException, NodeToFormatException {
+        _serialize(writer2, element, 1);
+    }
+
     public void serialize(XMLStreamWriter2 writer2, TagElement element) throws XMLStreamException, NodeToFormatException {
         _serialize(writer2, element, 1);
     }
