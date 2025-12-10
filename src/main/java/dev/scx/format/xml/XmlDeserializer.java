@@ -2,6 +2,8 @@ package dev.scx.format.xml;
 
 import dev.scx.node.Node;
 import dev.scx.node.NullNode;
+import dev.scx.node.ObjectNode;
+import dev.scx.node.StringNode;
 import org.codehaus.stax2.XMLStreamReader2;
 
 import javax.xml.stream.XMLStreamException;
@@ -60,31 +62,41 @@ final class XmlDeserializer {
             }
             reader.next();
         }
-        // 2, 解析
-        var object = _deserializeElement(reader);
+        // 2, 解析为 element 结构
+        var element = _deserializeElement(reader);
         // 3, 验证是否存在后续多余内容
         while (reader.hasNext()) {
             // 非法内容 Woodstox 会为直接抛异常 无需我们处理
             reader.next();
         }
-
-        return _convertToNode(object);
+        // 4, 将 element 按照一定规则转换成 Node
+        return _elementToNode(element);
     }
 
-    private static Node _convertToNode(Object object) {
+    private static Node _elementToNode(Object element) {
         // 只可能存在这四种类型
-        switch (object) {
+        switch (element) {
             case List<?> list -> {
+                // 我们需要遍历 list
+                // 1, 如果 全部是 SimpleEntry 并且 key 全是一致的, 我们将其看作一个数组.
+                // 2, 如果 全部是 SimpleEntry 但是 key 存在不同, 我们将其看作一个对象.
+                // 3, 如果 满足 2, 我们将其中一些相同的 key 也看作一个数组.
+                for (var o : list) {
 
+                }
+                return new ObjectNode();
             }
-            case String str -> {
-
-            }
+            // key 永远是 string, value 永远是 NULL/String/List
             case SimpleEntry<?, ?> entry -> {
-
+                return new ObjectNode();
             }
+            // String 转换成 StringNode
+            case String str -> {
+                return new StringNode(str);
+            }
+            // 已经是 NullNode 直接返回
             case NullNode nullNode -> {
-
+                return nullNode;
             }
             default -> throw new IllegalStateException();
         }
@@ -101,6 +113,7 @@ final class XmlDeserializer {
                 }
                 yield _deserializeElementNoRecursion(reader, stack, new ArrayList<>());
             }
+            // 理论上永远不会发生
             default -> throw new XMLStreamException("Unknown element type: " + currentType);
         };
     }
