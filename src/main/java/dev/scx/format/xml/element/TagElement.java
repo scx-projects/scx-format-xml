@@ -110,8 +110,9 @@ public final class TagElement implements Element, Iterable<Element> {
             sb.append(" ").append(attr.toString());
         }
 
-        // 如果无子元素: 自闭合
+        // 如果无子元素
         if (children.isEmpty()) {
+            // 使用 自闭合
             if (useSelfClosing) {
                 sb.append("/>");
             } else {
