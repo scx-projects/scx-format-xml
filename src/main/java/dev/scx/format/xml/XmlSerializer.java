@@ -36,7 +36,7 @@ final class XmlSerializer {
         switch (element) {
             case TagElement tagElement -> {
                 // 没有子元素 使用自闭合标签
-                if (tagElement.isEmpty()) {
+                if (tagElement.isEmpty()&& tagElement.useSelfClosing()) {
                     writer2.writeEmptyElement(tagElement.tagName());
                     for (var attribute : tagElement.attributes()) {
                         writer2.writeAttribute(attribute.name(), attribute.value());

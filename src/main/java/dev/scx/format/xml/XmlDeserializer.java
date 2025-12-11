@@ -52,6 +52,7 @@ final class XmlDeserializer {
                 switch (t) {
                     case START_ELEMENT -> {
                         var newElement = new TagElement(p.getLocalName());
+                        newElement.useSelfClosing(p.isEmptyElement());
                         _deserializeAttribute(p, newElement);
                         currElement.add(newElement);
                         stack.push(curr);
