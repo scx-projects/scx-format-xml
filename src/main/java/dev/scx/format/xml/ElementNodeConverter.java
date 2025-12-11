@@ -45,7 +45,7 @@ public class ElementNodeConverter {
     ///
     /// 11, `<a name="">  <b> 1 2 3 </b>   </a>` -> `{"b": " 1 2 3 ", "name": "" }`
     ///     所有的纯空白文本节点视为不存在, 但有内容则保留原始文本, 属性永远保留原始文本
-    public static Node elementToNode(Element element) {
+    public static Node elementToNode(Element element, XmlNodeConverterOptions options) {
 
         return new IntNode(0);
     }
@@ -75,7 +75,7 @@ public class ElementNodeConverter {
     ///
     /// 7, `{"": 123}` -> `<root>123</root>`
     ///    key 为 "", 直接解包
-    public static TagElement nodeToElement(Node node) {
+    public static TagElement nodeToElement(Node node, XmlNodeConverterOptions options) {
 
         return new TagElement("root");
     }

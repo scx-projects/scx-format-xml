@@ -28,7 +28,7 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     public Node formatToNode(Reader reader, XmlNodeConverterOptions options) throws FormatToNodeException, IOException {
         try {
             var element = xmlElementConverter.formatToElement(reader, options);
-            return elementToNode(element);
+            return elementToNode(element, options);
         } catch (XMLStreamException e) {
             throw new FormatToNodeException(e);
         }
@@ -38,7 +38,7 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     public Node formatToNode(InputStream inputStream, Charset charset, XmlNodeConverterOptions options) throws FormatToNodeException, IOException {
         try {
             var element = xmlElementConverter.formatToElement(inputStream, charset, options);
-            return elementToNode(element);
+            return elementToNode(element, options);
         } catch (XMLStreamException e) {
             throw new FormatToNodeException(e);
         }
@@ -48,7 +48,7 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     public Node formatToNode(String text, XmlNodeConverterOptions options) throws FormatToNodeException {
         try {
             var element = xmlElementConverter.formatToElement(text, options);
-            return elementToNode(element);
+            return elementToNode(element, options);
         } catch (XMLStreamException | IOException e) {
             throw new FormatToNodeException(e);
         }
@@ -58,7 +58,7 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     public Node formatToNode(byte[] bytes, Charset charset, XmlNodeConverterOptions options) throws FormatToNodeException {
         try {
             var element = xmlElementConverter.formatToElement(bytes, charset, options);
-            return elementToNode(element);
+            return elementToNode(element, options);
         } catch (XMLStreamException | IOException e) {
             throw new FormatToNodeException(e);
         }
@@ -68,7 +68,7 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     public Node formatToNode(File file, Charset charset, XmlNodeConverterOptions options) throws FormatToNodeException, IOException {
         try {
             var element = xmlElementConverter.formatToElement(file, charset, options);
-            return elementToNode(element);
+            return elementToNode(element, options);
         } catch (XMLStreamException e) {
             throw new FormatToNodeException(e);
         }
@@ -77,7 +77,7 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     @Override
     public void nodeToFormat(Node node, Writer writer, XmlNodeConverterOptions options) throws NodeToFormatException, IOException {
         try {
-            var element = nodeToElement(node);
+            var element = nodeToElement(node, options);
             xmlElementConverter.elementToFormat(element, writer, options);
         } catch (XMLStreamException e) {
             throw new NodeToFormatException(e);
@@ -87,7 +87,7 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     @Override
     public void nodeToFormat(Node node, OutputStream outputStream, Charset charset, XmlNodeConverterOptions options) throws NodeToFormatException, IOException {
         try {
-            var element = nodeToElement(node);
+            var element = nodeToElement(node, options);
             xmlElementConverter.elementToFormat(element, outputStream, charset, options);
         } catch (XMLStreamException e) {
             throw new NodeToFormatException(e);
@@ -97,7 +97,7 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     @Override
     public String nodeToFormatString(Node node, XmlNodeConverterOptions options) throws NodeToFormatException {
         try {
-            var element = nodeToElement(node);
+            var element = nodeToElement(node, options);
             return xmlElementConverter.elementToFormatString(element, options);
         } catch (XMLStreamException | IOException e) {
             throw new NodeToFormatException(e);
@@ -107,7 +107,7 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     @Override
     public byte[] nodeToFormatBytes(Node node, Charset charset, XmlNodeConverterOptions options) throws NodeToFormatException {
         try {
-            var element = nodeToElement(node);
+            var element = nodeToElement(node, options);
             return xmlElementConverter.elementToFormatBytes(element, charset, options);
         } catch (XMLStreamException | IOException e) {
             throw new NodeToFormatException(e);
@@ -117,11 +117,15 @@ public final class XmlNodeConverter implements FormatNodeConverter<XmlNodeConver
     @Override
     public File nodeToFormatFile(Node node, File file, Charset charset, XmlNodeConverterOptions options) throws NodeToFormatException, IOException {
         try {
-            var element = nodeToElement(node);
+            var element = nodeToElement(node, options);
             return xmlElementConverter.elementToFormatFile(element, file, charset, options);
         } catch (XMLStreamException e) {
             throw new NodeToFormatException(e);
         }
+    }
+
+    public XmlElementConverter xmlElementConverter() {
+        return xmlElementConverter;
     }
 
 }
