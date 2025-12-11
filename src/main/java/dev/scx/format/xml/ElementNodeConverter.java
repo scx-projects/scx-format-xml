@@ -60,10 +60,13 @@ public class ElementNodeConverter {
     /// 11, `<a name="">  <b> 1 2 3 </b>   </a>` -> `{"b": " 1 2 3 ", "name": "" }`
     ///     所有的纯空白文本节点视为不存在, 但有内容则保留原始文本, 属性永远保留原始文本
     public Node elementToNode(Element element) {
-       return _elementToNode(element);
+       return _elementToNode(element,1);
     }
 
-    private Node _elementToNode(Element element) {
+    private Node _elementToNode(Element element,int currentDepth) {
+        if (currentDepth > maxNestingDepth) {
+            throw new FormatToNodeException("Nesting depth exceeds limit: " + maxNestingDepth);
+        }
         if (element instanceof TagElement tagElement) {
             // 记录出现过的子元素和属性
             var elements = new ObjectNode();
@@ -106,7 +109,7 @@ public class ElementNodeConverter {
             for (var e : tagElement) {
                 if (e instanceof TagElement tag) {
                     var name = tag.tagName();
-                    var ele = _elementToNode(tag);
+                    var ele = _elementToNode(tag,currentDepth + 1);
                     // 可能存在重名元素
                     var oldChildNode = elements.get(name);
                     if (oldChildNode == null) {
