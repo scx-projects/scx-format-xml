@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/// TagElement
+///
+/// @author scx567888
+/// @version 0.0.1
 public final class TagElement implements Element, Iterable<Element> {
 
     private final String tagName;
