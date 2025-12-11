@@ -33,7 +33,7 @@ final class XmlDeserializer {
 
     private static Element _deserializeElement(XMLStreamReader2 reader) throws XMLStreamException {
         var stack = new TagElementStack();
-        var root = new TagElement(reader.getLocalName());
+        var root = new TagElement(reader.getLocalName(),reader.isEmptyElement());
         _deserializeAttribute(reader, root);
         return _deserializeElementNoRecursion(reader, stack, root);
     }
@@ -51,8 +51,7 @@ final class XmlDeserializer {
                 var t = p.next();
                 switch (t) {
                     case START_ELEMENT -> {
-                        var newElement = new TagElement(p.getLocalName());
-                        newElement.useSelfClosing(p.isEmptyElement());
+                        var newElement = new TagElement(p.getLocalName(),p.isEmptyElement());
                         _deserializeAttribute(p, newElement);
                         currElement.add(newElement);
                         stack.push(curr);

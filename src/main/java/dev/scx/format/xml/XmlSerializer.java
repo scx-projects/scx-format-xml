@@ -15,18 +15,22 @@ import javax.xml.stream.XMLStreamException;
 final class XmlSerializer {
 
     private final int maxNestingDepth;
+    private final String rootName;
 
     public XmlSerializer(XmlNodeConverterOptions options) {
         this.maxNestingDepth = options.maxNestingDepth();
+        this.rootName = options.rootName();
     }
 
-    /// todo 待处理 比如自动包裹
     public void serialize(XMLStreamWriter2 writer2, Element element) throws XMLStreamException, NodeToFormatException {
-        _serialize(writer2, element, 1);
-    }
-
-    public void serialize(XMLStreamWriter2 writer2, TagElement element) throws XMLStreamException, NodeToFormatException {
-        _serialize(writer2, element, 1);
+        // 我们需要尝试包裹独立的 标签
+        if (element instanceof TextElement) {
+            var root = new TagElement(rootName, false);
+            root.add(element);
+            _serialize(writer2, root, 1);
+        } else {
+            _serialize(writer2, element, 1);
+        }
     }
 
     private void _serialize(XMLStreamWriter2 writer2, Element element, int currentDepth) throws XMLStreamException, NodeToFormatException {

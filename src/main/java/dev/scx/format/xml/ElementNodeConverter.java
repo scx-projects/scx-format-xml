@@ -1,15 +1,29 @@
 package dev.scx.format.xml;
 
+import dev.scx.format.FormatToNodeException;
+import dev.scx.format.NodeToFormatException;
+import dev.scx.format.xml.element.Attribute;
 import dev.scx.format.xml.element.Element;
 import dev.scx.format.xml.element.TagElement;
-import dev.scx.node.IntNode;
-import dev.scx.node.Node;
+import dev.scx.format.xml.element.TextElement;
+import dev.scx.node.*;
 
-// todo 采取什么规则 ?
+import java.util.HashMap;
+
 /// 因为 XML <-> 通用对象 并不是完全语义兼容的,
 /// 比如数组, 根节点, 空值等.
 /// 这里 我们规定一些 转换规则.
 public class ElementNodeConverter {
+
+    private final String rootName;
+    private final int maxNestingDepth;
+    private final String itemName;
+
+    public ElementNodeConverter(XmlNodeConverterOptions options) {
+        this.rootName = options.rootName();
+        this.maxNestingDepth = options.maxNestingDepth();
+        this.itemName = options.itemName();
+    }
 
     /// ### elementToNode 规则:
     ///
@@ -45,9 +59,105 @@ public class ElementNodeConverter {
     ///
     /// 11, `<a name="">  <b> 1 2 3 </b>   </a>` -> `{"b": " 1 2 3 ", "name": "" }`
     ///     所有的纯空白文本节点视为不存在, 但有内容则保留原始文本, 属性永远保留原始文本
-    public static Node elementToNode(Element element, XmlNodeConverterOptions options) {
+    public Node elementToNode(Element element) {
+       return _elementToNode(element);
+    }
 
-        return new IntNode(0);
+    private Node _elementToNode(Element element) {
+        if (element instanceof TagElement tagElement) {
+            // 记录出现过的子元素和属性
+            var elements = new ObjectNode();
+
+            // 1, 处理当前元素的属性
+            for (var attribute : tagElement.attributes()) {
+                var name = attribute.name();
+                var value = attribute.value();
+                // 可能存在重名元素
+                var oldChildNode = elements.get(name);
+                if (oldChildNode == null) {
+                    elements.put(name, new StringNode(value));
+                    continue;
+                }
+                //我们默认尝试转换成 数组
+                if (oldChildNode instanceof ArrayNode arrayNode) {
+                    arrayNode.add(new StringNode(value));
+                } else {
+                    var arrayNode = new ArrayNode();
+                    arrayNode.add(oldChildNode);
+                    arrayNode.add(new StringNode(value));
+                    elements.put(name, arrayNode);
+                }
+            }
+
+            // 2, 判断是否是自闭合标签
+            var emptyElement = tagElement.isEmpty()&& tagElement.useSelfClosing();
+            // 自闭合标签 无需处理内部元素 直接返回
+            if (emptyElement) {
+                if (elements.isEmpty()) {
+                    return NullNode.NULL;
+                } else {
+                    return elements;
+                }
+            }
+
+            // 记录出现过的文本
+            var texts = new ArrayNode();
+
+            for (var e : tagElement) {
+                if (e instanceof TagElement tag) {
+                    var name = tag.tagName();
+                    var ele = _elementToNode(tag);
+                    // 可能存在重名元素
+                    var oldChildNode = elements.get(name);
+                    if (oldChildNode == null) {
+                        elements.put(name, ele);
+                        continue;
+                    }
+                    //我们默认尝试转换成 数组
+                    if (oldChildNode instanceof ArrayNode arrayNode) {
+                        arrayNode.add(ele);
+                    } else {
+                        var arrayNode = new ArrayNode();
+                        arrayNode.add(oldChildNode);
+                        arrayNode.add(ele);
+                        elements.put(name, arrayNode);
+                    }
+                }else if (e instanceof TextElement textElement) {
+                    // 遇到了文本 进行存储
+                    var text = textElement.text();
+                    texts.add(new StringNode(text));
+                }
+            }
+
+            // 没有任何子元素
+            if (elements.isEmpty()) {
+                // 如果文本也是空的
+                if (texts.isEmpty()) {
+                    return new StringNode("");
+                }
+                // 如果只有一个文本节点
+                if (texts.size() == 1) {
+                    return texts.get(0);
+                }
+                // 有很多文本节点 (应该不会出现这种情况)
+                return texts;
+            }
+            // 如果只有一个文本节点
+            if (texts.size() == 1) {
+                elements.put("", texts.get(0));
+                return elements;
+            } else if (texts.size() > 1) {
+                // 如果又很多文本节点 以数组形式添加
+                elements.put("", texts);
+            }
+
+            return elements;
+        }else  if (element instanceof TextElement textElement) {
+            var text = textElement.text();
+            return new StringNode(text);
+        }else {
+            throw new FormatToNodeException("Invalid element type");
+        }
     }
 
     /// ### nodeToElement 规则
@@ -75,9 +185,54 @@ public class ElementNodeConverter {
     ///
     /// 7, `{"": 123}` -> `<root>123</root>`
     ///    key 为 "", 直接解包
-    public static TagElement nodeToElement(Node node, XmlNodeConverterOptions options) {
+    public Element nodeToElement(Node node) {
+        // 顶级数组需要特殊处理
+        var isRootArray = node instanceof ArrayNode;
+        return _nodeToElement(node, rootName, isRootArray, 1);
+    }
 
-        return new TagElement("root");
+    private Element _nodeToElement(Node node, String key, boolean inArray, int currentDepth) {
+        if (currentDepth > maxNestingDepth) {
+            throw new NodeToFormatException("Nesting depth exceeds limit: " + maxNestingDepth);
+        }
+        switch (node) {
+            case NullNode _ -> {
+                // 如果根节点本身就是 null, 直接返回自闭合标签
+                return new TagElement(key,true);
+            }
+            case ValueNode valueNode -> {
+                // "", 直接解包
+                if (key.isEmpty()) {
+                    return  new TextElement(valueNode.asString());
+                } else {
+                    var el=new TagElement(key,false);
+                    el.add(new TextElement(valueNode.asString()));
+                    return el;
+                }
+            }
+            case ObjectNode objectNode -> {
+                var el=new TagElement(key,false);
+                for (var e : objectNode) {
+                   el.add(_nodeToElement(e.getValue(), e.getKey(), false, currentDepth + 1));
+                }
+                return el;
+            }
+            case ArrayNode arrayNode -> {
+                if (inArray) {
+                    var el=new TagElement(key,false);
+                    for (var e : arrayNode) {
+                        el.add(_nodeToElement(e, itemName, true, currentDepth + 1));
+                    }
+                    return el;
+                } else {
+                    var el=new TagElement(key,false);
+                    for (var e : arrayNode) {
+                        el.add(_nodeToElement(e, key, true, currentDepth + 1));
+                    }
+                    return el;
+                }
+            }
+        }
     }
 
 }

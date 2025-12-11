@@ -11,15 +11,15 @@ import java.util.List;
 public final class TagElement implements Element, Iterable<Element> {
 
     private final String tagName;
+    private final boolean useSelfClosing;
     private final List<Attribute> attributes;
     private final List<Element> children;
-    private boolean useSelfClosing;
 
-    public TagElement(String tagName) {
+    public TagElement(String tagName,boolean useSelfClosing) {
         this.tagName = tagName;
+        this.useSelfClosing = useSelfClosing;
         this.attributes = new ArrayList<>();
         this.children = new ArrayList<>();
-        this.useSelfClosing = false;
     }
 
     public String tagName() {
@@ -28,10 +28,6 @@ public final class TagElement implements Element, Iterable<Element> {
 
     public boolean useSelfClosing() {
         return useSelfClosing;
-    }
-
-    public void useSelfClosing(boolean useSelfClosing) {
-        this.useSelfClosing = useSelfClosing;
     }
 
     //***************** children 相关方法 *******************
