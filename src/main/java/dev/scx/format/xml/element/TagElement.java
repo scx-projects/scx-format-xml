@@ -15,7 +15,7 @@ public final class TagElement implements Element, Iterable<Element> {
     private final List<Attribute> attributes;
     private final List<Element> children;
 
-    public TagElement(String tagName,boolean useSelfClosing) {
+    public TagElement(String tagName, boolean useSelfClosing) {
         this.tagName = tagName;
         this.useSelfClosing = useSelfClosing;
         this.attributes = new ArrayList<>();

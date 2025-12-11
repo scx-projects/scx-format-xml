@@ -2,13 +2,10 @@ package dev.scx.format.xml;
 
 import dev.scx.format.FormatToNodeException;
 import dev.scx.format.NodeToFormatException;
-import dev.scx.format.xml.element.Attribute;
 import dev.scx.format.xml.element.Element;
 import dev.scx.format.xml.element.TagElement;
 import dev.scx.format.xml.element.TextElement;
 import dev.scx.node.*;
-
-import java.util.HashMap;
 
 /// 因为 XML <-> 通用对象 并不是完全语义兼容的,
 /// 比如数组, 根节点, 空值等.
@@ -60,10 +57,10 @@ public class ElementNodeConverter {
     /// 11, `<a name="">  <b> 1 2 3 </b>   </a>` -> `{"b": " 1 2 3 ", "name": "" }`
     ///     所有的纯空白文本节点视为不存在, 但有内容则保留原始文本, 属性永远保留原始文本
     public Node elementToNode(Element element) {
-       return _elementToNode(element,1);
+        return _elementToNode(element, 1);
     }
 
-    private Node _elementToNode(Element element,int currentDepth) {
+    private Node _elementToNode(Element element, int currentDepth) {
         if (currentDepth > maxNestingDepth) {
             throw new FormatToNodeException("Nesting depth exceeds limit: " + maxNestingDepth);
         }
@@ -93,7 +90,7 @@ public class ElementNodeConverter {
             }
 
             // 2, 判断是否是自闭合标签
-            var emptyElement = tagElement.isEmpty()&& tagElement.useSelfClosing();
+            var emptyElement = tagElement.isEmpty() && tagElement.useSelfClosing();
             // 自闭合标签 无需处理内部元素 直接返回
             if (emptyElement) {
                 if (elements.isEmpty()) {
@@ -109,7 +106,7 @@ public class ElementNodeConverter {
             for (var e : tagElement) {
                 if (e instanceof TagElement tag) {
                     var name = tag.tagName();
-                    var ele = _elementToNode(tag,currentDepth + 1);
+                    var ele = _elementToNode(tag, currentDepth + 1);
                     // 可能存在重名元素
                     var oldChildNode = elements.get(name);
                     if (oldChildNode == null) {
@@ -125,7 +122,7 @@ public class ElementNodeConverter {
                         arrayNode.add(ele);
                         elements.put(name, arrayNode);
                     }
-                }else if (e instanceof TextElement textElement) {
+                } else if (e instanceof TextElement textElement) {
                     // 遇到了文本 进行存储
                     var text = textElement.text();
                     texts.add(new StringNode(text));
@@ -155,10 +152,10 @@ public class ElementNodeConverter {
             }
 
             return elements;
-        }else  if (element instanceof TextElement textElement) {
+        } else if (element instanceof TextElement textElement) {
             var text = textElement.text();
             return new StringNode(text);
-        }else {
+        } else {
             throw new FormatToNodeException("Invalid element type");
         }
     }
@@ -201,34 +198,34 @@ public class ElementNodeConverter {
         switch (node) {
             case NullNode _ -> {
                 // 如果根节点本身就是 null, 直接返回自闭合标签
-                return new TagElement(key,true);
+                return new TagElement(key, true);
             }
             case ValueNode valueNode -> {
                 // "", 直接解包
                 if (key.isEmpty()) {
-                    return  new TextElement(valueNode.asString());
+                    return new TextElement(valueNode.asString());
                 } else {
-                    var el=new TagElement(key,false);
+                    var el = new TagElement(key, false);
                     el.add(new TextElement(valueNode.asString()));
                     return el;
                 }
             }
             case ObjectNode objectNode -> {
-                var el=new TagElement(key,false);
+                var el = new TagElement(key, false);
                 for (var e : objectNode) {
-                   el.add(_nodeToElement(e.getValue(), e.getKey(), false, currentDepth + 1));
+                    el.add(_nodeToElement(e.getValue(), e.getKey(), false, currentDepth + 1));
                 }
                 return el;
             }
             case ArrayNode arrayNode -> {
                 if (inArray) {
-                    var el=new TagElement(key,false);
+                    var el = new TagElement(key, false);
                     for (var e : arrayNode) {
                         el.add(_nodeToElement(e, itemName, true, currentDepth + 1));
                     }
                     return el;
                 } else {
-                    var el=new TagElement(key,false);
+                    var el = new TagElement(key, false);
                     for (var e : arrayNode) {
                         el.add(_nodeToElement(e, key, true, currentDepth + 1));
                     }

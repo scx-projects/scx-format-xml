@@ -18,7 +18,7 @@ import static dev.scx.format.xml.XmlDeserializer.deserialize;
 ///
 /// @author scx567888
 /// @version 0.0.1
-public final class XmlElementConverter  {
+public final class XmlElementConverter {
 
     public XmlElementConverter() {
 
@@ -75,7 +75,7 @@ public final class XmlElementConverter  {
         }
     }
 
-    public Element formatToElement(String text, XmlNodeConverterOptions options) throws  XMLStreamException, IOException {
+    public Element formatToElement(String text, XmlNodeConverterOptions options) throws XMLStreamException, IOException {
         try (var reader = new StringReader(text)) {
             return formatToElement(reader, options);
         }
@@ -87,7 +87,7 @@ public final class XmlElementConverter  {
         }
     }
 
-    public Element formatToElement(File file, Charset charset, XmlNodeConverterOptions options) throws  IOException, XMLStreamException {
+    public Element formatToElement(File file, Charset charset, XmlNodeConverterOptions options) throws IOException, XMLStreamException {
         try (var xmlStreamReader = createXMLStreamReader(file, options)) {
             return deserialize(xmlStreamReader.reader());
         }
@@ -119,7 +119,7 @@ public final class XmlElementConverter  {
         }
     }
 
-    public File elementToFormatFile(Element element, File file, Charset charset, XmlNodeConverterOptions options) throws  IOException, XMLStreamException {
+    public File elementToFormatFile(Element element, File file, Charset charset, XmlNodeConverterOptions options) throws IOException, XMLStreamException {
         try (var outputStream = new FileOutputStream(file)) {
             elementToFormat(element, outputStream, charset, options);
             return file;
