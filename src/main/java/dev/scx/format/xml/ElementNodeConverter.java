@@ -10,6 +10,9 @@ import dev.scx.node.*;
 /// 因为 XML <-> 通用对象 并不是完全语义兼容的,
 /// 比如数组, 根节点, 空值等.
 /// 这里 我们规定一些 转换规则.
+///
+/// @author scx567888
+/// @version 0.0.1
 public class ElementNodeConverter {
 
     private final String rootName;
