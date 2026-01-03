@@ -94,7 +94,7 @@
     <properties>
 
         <!-- *********************** 以下为依赖包版本 *********************** -->
-        <scx-format.version>0.0.2</scx-format.version>
+        <scx-format.version>0.1.0</scx-format.version>
         <woodstox.version>7.1.1</woodstox.version>
         <testng.version>7.11.0</testng.version>
 
